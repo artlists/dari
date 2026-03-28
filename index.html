@@ -9,9 +9,9 @@
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
         :root {
-            --bg: #0c0c0e;
-            --surface: #16161a;
-            --border: rgba(255,255,255,0.07);
+            --bg: #0f0f10;
+            --surface: #1a1a1e;
+            --border: rgba(255,255,255,0.05);
             --text: #f0ede8;
             --muted: #6b6a72;
             --give: #b8f0a0;
@@ -117,10 +117,10 @@
             position: absolute;
             width: 100%;
             height: 100%;
-            border-radius: 28px;
+            border-radius: 20px;
             background: var(--surface);
             border: 1px solid var(--border);
-            padding: 28px;
+            padding: 20px;
             display: flex;
             flex-direction: column;
             cursor: grab;
@@ -145,33 +145,17 @@
         .card:nth-child(n+4) { opacity: 0; pointer-events: none; }
 
         /* card internals */
-        .card-avatar {
-            width: 52px; height: 52px;
-            border-radius: 50%;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 22px;
-            font-family: 'Fraunces', serif;
-            font-weight: 700;
-            flex-shrink: 0;
-            margin-bottom: 20px;
-        }
         .card-username {
             font-size: 13px;
             color: var(--muted);
-            margin-bottom: 4px;
+            margin-bottom: 16px;
         }
         .card-name {
             font-family: 'Fraunces', serif;
-            font-size: 28px;
+            font-size: 24px;
             font-weight: 700;
             line-height: 1.1;
-            margin-bottom: 24px;
-        }
-
-        .card-divider {
-            width: 40px; height: 1px;
-            background: var(--border);
-            margin-bottom: 24px;
+            margin-bottom: 20px;
         }
 
         .card-label {
@@ -185,14 +169,14 @@
         .card-want-label { color: var(--want); }
 
         .card-value {
-            font-size: 18px;
+            font-size: 16px;
             font-weight: 500;
             line-height: 1.3;
-            margin-bottom: 20px;
+            margin-bottom: 16px;
         }
 
         .card-desc {
-            font-size: 14px;
+            font-size: 13px;
             color: var(--muted);
             line-height: 1.5;
             margin-top: auto;
@@ -238,7 +222,7 @@
         }
         .action-btn {
             border: none;
-            border-radius: 50%;
+            border-radius: 14px;
             cursor: pointer;
             display: flex; align-items: center; justify-content: center;
             transition: transform .15s, box-shadow .15s;
@@ -313,10 +297,10 @@
             background: var(--surface);
             border: 1px solid var(--border);
             border-radius: 20px;
-            padding: 20px;
+            padding: 16px;
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 8px;
             flex-shrink: 0;
         }
         .offer-card-row { display: flex; align-items: flex-start; justify-content: space-between; }
@@ -357,8 +341,8 @@
             border-radius: 14px;
             color: var(--text);
             font-family: 'DM Sans', sans-serif;
-            font-size: 16px;
-            padding: 14px 16px;
+            font-size: 15px;
+            padding: 12px 14px;
             outline: none;
             transition: border-color .2s;
             resize: none;
@@ -369,18 +353,27 @@
             margin-top: 8px;
             background: linear-gradient(135deg, var(--give), #38d67c);
             border: none;
-            border-radius: 16px;
+            border-radius: 14px;
             color: #0c160f;
             font-family: 'DM Sans', sans-serif;
-            font-size: 17px;
+            font-size: 16px;
             font-weight: 600;
-            padding: 18px;
+            padding: 16px;
             cursor: pointer;
             transition: opacity .2s, transform .15s;
             flex-shrink: 0;
         }
         .publish-btn:hover { opacity: .9; }
         .publish-btn:active { transform: scale(.97); }
+
+        /* ══════════════════════
+           PROFILE VIEW
+        ══════════════════════ */
+        #view-profile {
+            overflow-y: auto;
+            padding: 8px 16px 100px;
+            gap: 16px;
+        }
 
         /* ══════════════════════
            MATCH POPUP
@@ -399,31 +392,31 @@
         .match-card {
             background: var(--surface);
             border: 1px solid var(--border);
-            border-radius: 28px;
-            padding: 36px 28px;
+            border-radius: 24px;
+            padding: 32px 24px;
             width: 100%;
-            max-width: 380px;
+            max-width: 340px;
             text-align: center;
         }
-        .match-emoji { font-size: 56px; margin-bottom: 16px; }
+        .match-emoji { font-size: 48px; margin-bottom: 12px; }
         .match-title {
             font-family: 'Fraunces', serif;
-            font-size: 32px;
+            font-size: 28px;
             font-weight: 700;
             background: linear-gradient(135deg, var(--give), var(--want));
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             margin-bottom: 8px;
         }
-        .match-sub { color: var(--muted); font-size: 15px; margin-bottom: 28px; }
+        .match-sub { color: var(--muted); font-size: 14px; margin-bottom: 24px; }
         .match-btns { display: flex; flex-direction: column; gap: 10px; }
         .match-contact {
             background: linear-gradient(135deg, var(--give), #38d67c);
             border: none; border-radius: 14px;
             color: #0c160f;
             font-family: 'DM Sans', sans-serif;
-            font-size: 16px; font-weight: 600;
-            padding: 15px; cursor: pointer;
+            font-size: 15px; font-weight: 600;
+            padding: 14px; cursor: pointer;
         }
         .match-close {
             background: none;
@@ -431,8 +424,8 @@
             border-radius: 14px;
             color: var(--muted);
             font-family: 'DM Sans', sans-serif;
-            font-size: 16px;
-            padding: 15px; cursor: pointer;
+            font-size: 15px;
+            padding: 14px; cursor: pointer;
         }
 
         /* ── animations ── */
@@ -457,6 +450,7 @@
 <div class="tabs">
     <div class="tab active" onclick="showView('swipe')" id="tab-swipe">Найти</div>
     <div class="tab" onclick="showView('my')" id="tab-my-tab">Мои дары</div>
+    <div class="tab" onclick="showView('profile')" id="tab-profile">Профиль</div>
     <div class="tab" onclick="showView('create')" id="tab-create">+ Создать</div>
 </div>
 
@@ -481,6 +475,20 @@
         <span>＋</span> Опубликовать новый дар
     </div>
     <div id="my-list"></div>
+</div>
+
+<!-- ═══ PROFILE VIEW ═══ -->
+<div id="view-profile" class="view">
+    <div class="field-group">
+        <div class="field-label">О себе</div>
+        <input id="bio" placeholder="Расскажите о себе…" />
+    </div>
+    <div class="field-group">
+        <div class="field-label">Навыки (через запятую)</div>
+        <input id="skills" placeholder="Дизайн, программирование, фото…" />
+    </div>
+    <button class="publish-btn" onclick="saveProfile()">Сохранить профиль</button>
+    <div id="profile-status" style="text-align:center;color:var(--muted);font-size:13px;margin-top:12px"></div>
 </div>
 
 <!-- ═══ CREATE VIEW ═══ -->
@@ -514,6 +522,8 @@
 </div>
 
 <script>
+    const API = "http://127.0.0.1:8000";
+    
     // ─── Telegram WebApp init ───
     const tg = window.Telegram?.WebApp;
     let currentUser = null;
@@ -525,24 +535,61 @@
     }
 
     // ─── Data ───
-    let deck = [];        // cards to show
-    let myOffers = JSON.parse(localStorage.getItem('dari_offers') || '[]');
+    let deck = [];
+    let myOffers = [];
+    let currentProfile = null;
 
     const DEMO = [
         { id: 1, telegram_id: 111, username: 'anna_farm', name: 'Аня', give: 'Органические овощи с фермы', want: 'Уроки йоги или медитации', desc: 'Доставлю сама по Москве, 5 кг в неделю', color: '#c5f0b8' },
         { id: 2, telegram_id: 222, username: 'ivan_code', name: 'Иван', give: 'Разработка лендинга', want: 'Фотосессия или видеосъёмка', desc: 'React/Next.js, опыт 6 лет', color: '#ffd97a' },
-        { id: 3, telegram_id: 333, username: 'masha_photo', name: 'Маша', give: 'Портретная фотосессия (2 ч)', want: 'Массаж или SPA-процедуры', desc: 'Профессиональное оборудование, lightroom', color: '#f5b8d6' },
+        { id: 3, telegram_id: 333, username: 'masha_photo', name: 'Маша', give: 'Портретная фотосессия (2 ч)', want: 'Массаж или Spa-процедуры', desc: 'Профессиональное оборудование, lightroom', color: '#f5b8d6' },
         { id: 4, telegram_id: 444, username: 'glamp_pro', name: 'Глэмпинг Лес', give: 'Ночь в глэмпинге для двоих', want: 'SMM-ведение или контент', desc: 'Подмосковье, 2 часа от Москвы', color: '#b8d8f0' },
         { id: 5, telegram_id: 555, username: 'chef_dmitry', name: 'Дима', give: 'Мастер-класс по итальянской кухне', want: 'Настройка компьютера / IT-помощь', desc: 'На своей кухне, 3-4 человека', color: '#e8c8a0' },
     ];
 
-    function init() {
-        deck = [...DEMO];
-        renderDeck();
+    async function init() {
+        await loadListings();
+        await loadProfile();
         renderMyOffers();
+    }
 
-        if (tg) {
-            tg.sendData?.(JSON.stringify({ type: 'get_listings' }));
+    async function loadListings() {
+        try {
+            const res = await fetch(API + "/listings");
+            const data = await res.json();
+            deck = data.listings.map(l => ({
+                id: l.id,
+                telegram_id: l.user_id,
+                username: l.username,
+                name: l.username,
+                give: l.have,
+                want: l.need,
+                desc: l.description || '',
+                color: '#b8f0a0'
+            }));
+            if (deck.length === 0) {
+                deck = [...DEMO];
+            }
+        } catch (e) {
+            console.log("Using demo data");
+            deck = [...DEMO];
+        }
+        renderDeck();
+    }
+
+    async function loadProfile() {
+        if (!currentUser?.id) return;
+        try {
+            const res = await fetch(API + "/profile/" + currentUser.id);
+            const data = await res.json();
+            if (data && data.user_id) {
+                currentProfile = data;
+                document.getElementById('bio').value = data.bio || '';
+                document.getElementById('skills').value = (data.skills || []).join(', ');
+                document.getElementById('profile-status').textContent = 'Профиль загружен';
+            }
+        } catch (e) {
+            console.log("No profile yet");
         }
     }
 
@@ -552,7 +599,7 @@
         document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
 
         document.getElementById(`view-${v}`).classList.add('active');
-        const tabMap = { swipe: 'tab-swipe', my: 'tab-my-tab', create: 'tab-create' };
+        const tabMap = { swipe: 'tab-swipe', my: 'tab-my-tab', profile: 'tab-profile', create: 'tab-create' };
         document.getElementById(tabMap[v])?.classList.add('active');
 
         if (v === 'my') renderMyOffers();
@@ -562,7 +609,6 @@
     function renderDeck() {
         const container = document.getElementById('deck');
         const empty = document.getElementById('empty-deck');
-        // clear cards
         container.querySelectorAll('.card').forEach(c => c.remove());
 
         if (!deck.length) {
@@ -571,7 +617,6 @@
         }
         empty.style.display = 'none';
 
-        // render top 3
         const visible = deck.slice(0, 3).reverse();
         visible.forEach((data, i) => {
             const card = buildCard(data);
@@ -580,25 +625,17 @@
         });
     }
 
-    const AVATARS = ['🌿','🎨','📸','🏕️','🍝','🎵','💻','🌸','🏡','✈️'];
-
     function buildCard(data) {
         const card = document.createElement('div');
         card.className = 'card';
         card.dataset.id = data.id;
 
-        const avatarEmoji = AVATARS[data.id % AVATARS.length];
-        const avatarBg = data.color + '22';
-        const avatarColor = data.color;
-
         card.innerHTML = `
             <div class="card-overlay-like">Дарю ♥</div>
             <div class="card-overlay-pass">Мимо ✕</div>
-            <div class="card-avatar" style="background:${avatarBg};color:${avatarColor}">${avatarEmoji}</div>
             <div class="card-username">@${data.username}</div>
             <div class="card-name">${data.name}</div>
-            <div class="card-divider"></div>
-            <div class="card-label card-give-label">Дарит</div>
+            <div class="card-label card-give-label">Дар</div>
             <div class="card-value">${data.give}</div>
             <div class="card-label card-want-label">Хочет</div>
             <div class="card-value">${data.want}</div>
@@ -696,12 +733,27 @@
         }
     }
 
-    function onLike(data, isSuper = false) {
+    async function onLike(data, isSuper = false) {
         tg?.HapticFeedback?.impactOccurred('medium');
-        tg?.sendData?.(JSON.stringify({ type: 'like', partner_id: data.telegram_id, listing_id: data.id }));
-
-        // Show match popup (demo: always match)
-        setTimeout(() => showMatch(data, isSuper), 200);
+        
+        try {
+            const res = await fetch(API + "/match", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    have: data.give,
+                    need: data.want,
+                    user_id: currentUser?.id || 0,
+                    username: currentUser?.username || "anon"
+                })
+            });
+            const matchData = await res.json();
+            if (matchData.matches.length) {
+                showMatch({ username: matchData.matches[0].username }, isSuper);
+            }
+        } catch (e) {
+            console.log("Match error", e);
+        }
     }
 
     // ─── Match popup ───
@@ -751,12 +803,11 @@
 
     function deleteOffer(id) {
         myOffers = myOffers.filter(o => o.id !== id);
-        localStorage.setItem('dari_offers', JSON.stringify(myOffers));
         renderMyOffers();
     }
 
     // ─── Publish ───
-    function publishOffer() {
+    async function publishOffer() {
         const give = document.getElementById('inp-have').value.trim();
         const want = document.getElementById('inp-need').value.trim();
         const desc = document.getElementById('inp-desc').value.trim();
@@ -766,43 +817,62 @@
             return;
         }
 
-        const offer = {
-            id: Date.now(),
-            telegram_id: currentUser?.id || 0,
-            username: currentUser?.username || 'me',
-            name: currentUser?.first_name || 'Я',
-            give, want, desc,
-            color: '#b8f0a0'
-        };
+        try {
+            await fetch(API + "/offer", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    have: give,
+                    need: want,
+                    description: desc,
+                    user_id: currentUser?.id || 0,
+                    username: currentUser?.username || "anon"
+                })
+            });
 
-        myOffers.unshift(offer);
-        localStorage.setItem('dari_offers', JSON.stringify(myOffers));
+            document.getElementById('inp-have').value = '';
+            document.getElementById('inp-need').value = '';
+            document.getElementById('inp-desc').value = '';
 
-        tg?.sendData?.(JSON.stringify({
-            type: 'new_offer',
-            offer: { ...offer, have: give, need: want },
-            user: currentUser,
-            initData: tg?.initData
-        }));
-
-        document.getElementById('inp-have').value = '';
-        document.getElementById('inp-need').value = '';
-        document.getElementById('inp-desc').value = '';
-
-        showView('my');
+            await loadListings();
+            showView('my');
+        } catch (e) {
+            console.log("Publish error", e);
+            alert('Ошибка публикации');
+        }
     }
 
-    // ─── Bot events ───
-    tg?.onEvent?.('message', (e) => {
+    // ─── Profile ───
+    async function saveProfile() {
+        const bio = document.getElementById('bio').value.trim();
+        const skills = document.getElementById('skills').value.split(',').map(s => s.trim()).filter(s => s);
+
+        if (!currentUser?.id) {
+            alert('Ошибка: пользователь не найден');
+            return;
+        }
+
         try {
-            const data = JSON.parse(e.data);
-            if (data.type === 'listings') {
-                deck = data.listings.map(l => ({ ...l, give: l.have, want: l.need }));
-                renderDeck();
-            }
-            if (data.type === 'match') showMatch({ username: data.username }, false);
-        } catch {}
-    });
+            await fetch(API + "/profile", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    user_id: currentUser.id,
+                    username: currentUser.username || "anon",
+                    bio,
+                    skills
+                })
+            });
+
+            document.getElementById('profile-status').textContent = 'Профиль сохранён ✓';
+            setTimeout(() => {
+                document.getElementById('profile-status').textContent = '';
+            }, 3000);
+        } catch (e) {
+            console.log("Profile error", e);
+            alert('Ошибка сохранения');
+        }
+    }
 
     init();
 </script>
