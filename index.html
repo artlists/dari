@@ -3,350 +3,808 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Дари — дари и получай</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        const tg = window.Telegram.WebApp;
-        let currentUser = null;
-
-        function initTelegram() {
-            tg.ready();
-            tg.expand();
-            
-            // Получаем полные данные пользователя (telegram_id обязателен)
-            currentUser = tg.initDataUnsafe.user;
-            if (!currentUser || !currentUser.id) {
-                tg.showAlert("Ошибка: не удалось получить Telegram ID. Попробуйте перезапустить приложение.");
-                return;
-            }
-            
-            console.log('✅ Дари запущено. Telegram ID:', currentUser.id, 'Username:', currentUser.username);
-            
-            // Главная кнопка
-            tg.MainButton.setText("Опубликовать дар");
-            tg.MainButton.onClick(() => createOffer());
-            tg.MainButton.show();
-            
-            // Тема
-            document.documentElement.style.setProperty('--tg-theme-bg-color', tg.colorScheme === 'dark' ? '#111111' : '#ffffff');
-            document.documentElement.style.setProperty('--tg-theme-text-color', tg.colorScheme === 'dark' ? '#ffffff' : '#000000');
-        }
-
-        function initTailwind() {
-            tailwind.config = { content: [] };
-        }
-
-        // Хранилище всех актуальных даров (получаемых из бота)
-        let allListings = [];
-
-        let myOffers = [];
-        // Все актуальные лоты (кеш, синхронизируется с ботом)
-        // let allListings = []; // Уже объявлено выше
-
-        function loadMyOffers() {
-            const saved = localStorage.getItem('dari_myOffers');
-            if (saved) myOffers = JSON.parse(saved);
-            renderMyOffers();
-        }
-
-        function saveMyOffers() {
-            localStorage.setItem('dari_myOffers', JSON.stringify(myOffers));
-        }
-
-        function createOffer() {
-            const have = document.getElementById('have-input').value.trim();
-            const need = document.getElementById('need-input').value.trim();
-            const desc = document.getElementById('desc-input').value.trim();
-
-            if (!have || !need) {
-                tg.showAlert("Заполните «Что дарю» и «Что хочу»");
-                return;
-            }
-
-            const newOffer = {
-                id: Date.now(),
-                telegram_id: currentUser.id,           // ← КЛЮЧЕВОЕ: telegram_id
-                username: currentUser.username || `user${currentUser.id}`,
-                name: currentUser.first_name || 'Пользователь',
-                have: have,
-                need: need,
-                desc: desc || 'Без описания',
-                created: new Date().toISOString()
-            };
-
-            myOffers.unshift(newOffer);
-            saveMyOffers();
-            renderMyOffers();
-
-            // Отправляем в бот ВСЁ с telegram_id
-            const payload = {
-                type: 'new_offer',
-                offer: newOffer,
-                user: currentUser,
-                initData: tg.initData   // полные безопасные данные
-            };
-            tg.sendData(JSON.stringify(payload));
-
-            tg.showPopup({
-                title: '🎁 Дар опубликован!',
-                message: 'Объявление отправлено. Ищем того, кто хочет обменяться.',
-                buttons: [{type: 'close'}]
-            });
-
-            // Очистка
-            document.getElementById('have-input').value = '';
-            document.getElementById('need-input').value = '';
-            document.getElementById('desc-input').value = '';
-            
-            showTab(1);
-        }
-
-        function deleteOffer(id) {
-            myOffers = myOffers.filter(o => o.id !== id);
-            saveMyOffers();
-            renderMyOffers();
-        }
-
-        function renderMyOffers() {
-            const container = document.getElementById('my-offers-list');
-            container.innerHTML = '';
-
-            if (myOffers.length === 0) {
-                container.innerHTML = `<div class="text-center py-12 text-gray-400"><p class="text-2xl"></p><p class="mt-4">Пока нет ваших даров</p><p class="text-sm">Опубликуйте первый и начните обмениваться</p></div>`;
-                return;
-            }
-
-            myOffers.forEach(offer => {
-                const div = document.createElement('div');
-                div.className = 'bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl p-6 mb-4';
-                div.innerHTML = `
-                    <div class="flex justify-between">
-                        <div class="flex-1">
-                            <div class="font-semibold text-lg">Дарю: ${offer.have}</div>
-                            <div class="text-emerald-400 mt-1">Хочу: ${offer.need}</div>
-                            ${offer.desc ? `<p class="mt-3 text-sm text-gray-400">${offer.desc}</p>` : ''}
-                            <div class="text-xs text-gray-500 mt-4">ID: ${offer.telegram_id}</div>
-                        </div>
-                        <button onclick="deleteOffer(${offer.id}); event.stopImmediatePropagation()" class="text-red-400 text-2xl leading-none">Закрыть</button>
-                    </div>
-                `;
-                container.appendChild(div);
-            });
-        }
-
-        function renderAllListings() {
-            const container = document.getElementById('all-listings');
-            container.innerHTML = '';
-            if (!allListings.length) {
-                container.innerHTML = '<div class="text-center text-gray-400 py-12">Нет доступных даров</div>';
-                return;
-            }
-            allListings.forEach(listing => {
-                const card = document.createElement('div');
-                card.className = 'bg-transparent border border-white/10 rounded-2xl p-6 mb-6 cursor-pointer hover:border-emerald-400 transition-all';
-                card.innerHTML = `
-                    <div class="flex items-center gap-3 mb-5">
-                        <div class="flex-1">
-                            <div class="font-semibold">@${listing.username}</div>
-                            <div class="text-sm text-gray-400">${listing.name}</div>
-                        </div>
-                        <div class="text-xs bg-white/10 px-3 py-1 rounded-2xl">${listing.telegram_id}</div>
-                    </div>
-                    <div class="mb-4">
-                        <span class="uppercase text-xs tracking-widest text-emerald-400">Дарю</span>
-                        <div class="font-medium text-lg">${listing.have}</div>
-                    </div>
-                    <div>
-                        <span class="uppercase text-xs tracking-widest text-amber-400">Хочу</span>
-                        <div class="font-medium text-lg">${listing.need}</div>
-                    </div>
-                    ${listing.desc ? `<p class="text-sm text-gray-400 mt-5">${listing.desc}</p>` : ''}
-                    
-                    <div class="grid grid-cols-2 gap-4 mt-8">
-                        <button onclick="likeListing(${listing.id}); event.stopImmediatePropagation()" class="bg-emerald-500 hover:bg-emerald-600 py-5 rounded-3xl font-semibold text-xl active:scale-95 transition-all">Дарить!</button>
-                        <button onclick="passListing(${listing.id}); event.stopImmediatePropagation()" class="border border-white/30 hover:border-white/60 py-5 rounded-3xl font-semibold text-xl active:scale-95 transition-all">Пропустить</button>
-                    </div>
-                `;
-                container.appendChild(card);
-            });
-        }
-
-        function likeListing(id) {
-            const listing = allListings.find(l => l.id === id);
-            if (!listing) return;
-
-            tg.HapticFeedback.impactOccurred('medium');
-
-            tg.sendData(JSON.stringify({
-                type: 'like',
-                my_id: currentUser.id,
-                partner_id: listing.telegram_id,
-                listing_id: listing.id
-            }));
-        }
-        // MATCH PANEL functions
-        function openMatchPanel(username) {
-            document.getElementById('match-text').innerText = `Вы совпали с @${username}`;
-            const panel = document.getElementById('match-panel');
-            panel.classList.remove('hidden');
-            panel.classList.add('flex');
-
-            document.getElementById('match-contact').onclick = () => {
-                window.open(`https://t.me/${username}`, '_blank');
-            };
-        }
-
-        function closeMatchPanel() {
-            const panel = document.getElementById('match-panel');
-            panel.classList.add('hidden');
-            panel.classList.remove('flex');
-        }
-
-        function passListing(id) {
-            tg.HapticFeedback.impactOccurred('light');
-        }
-
-        function showTab(tab) {
-            document.getElementById('tab-home').classList.add('hidden');
-            document.getElementById('tab-my').classList.add('hidden');
-            document.getElementById('tab-search').classList.add('hidden');
-
-            if (tab === 0) document.getElementById('tab-home').classList.remove('hidden');
-            if (tab === 1) {
-                document.getElementById('tab-my').classList.remove('hidden');
-                renderMyOffers();
-            }
-            if (tab === 2) {
-                document.getElementById('tab-search').classList.remove('hidden');
-                renderAllListings();
-            }
-
-            document.querySelectorAll('.nav-btn').forEach((btn, i) => {
-                btn.classList.toggle('text-emerald-400', i === tab);
-            });
-        }
-
-        window.onload = function() {
-            initTelegram();
-            tg.sendData(JSON.stringify({ type: 'get_listings' }));
-            initTailwind();
-            loadMyOffers();
-            renderAllListings();
-            
-            console.log('%c🚀 Дари — улучшенная версия готова. Telegram ID сохранён во всех данных.', 'color:#10b981; font-weight:bold');
-        };
-
-        // Получение новых данных от бота
-        initTelegram();
-        tg.onEvent('message', function(event) {
-            try {
-                const data = JSON.parse(event.data);
-                if (data.type === 'listings') {
-                    allListings = data.listings || [];
-                    renderAllListings();
-                }
-                if (data.type === 'match') {
-                    openMatchPanel(data.username);
-                }
-            } catch (e) {
-                console.log('event parse error', e);
-            }
-        });
-    </script>
+    <title>Дари</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,700;1,300&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;display=swap');
-        body { font-family: 'Inter', system-ui, sans-serif; }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg: #0c0c0e;
+            --surface: #16161a;
+            --border: rgba(255,255,255,0.07);
+            --text: #f0ede8;
+            --muted: #6b6a72;
+            --give: #b8f0a0;
+            --want: #f7c948;
+            --like: #4ade80;
+            --pass: #ef4444;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'DM Sans', sans-serif;
+            min-height: 100svh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        /* ── HEADER ── */
+        header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 18px 24px 12px;
+            flex-shrink: 0;
+        }
+        .logo {
+            font-family: 'Fraunces', serif;
+            font-size: 28px;
+            font-weight: 700;
+            letter-spacing: -1px;
+            background: linear-gradient(135deg, var(--give) 0%, var(--want) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .header-right {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .icon-btn {
+            width: 40px; height: 40px;
+            border-radius: 50%;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer;
+            font-size: 16px;
+            transition: border-color .2s;
+        }
+        .icon-btn:hover { border-color: rgba(255,255,255,0.2); }
+
+        /* ── TABS ── */
+        .tabs {
+            display: flex;
+            gap: 4px;
+            padding: 0 24px 16px;
+            flex-shrink: 0;
+        }
+        .tab {
+            flex: 1;
+            padding: 9px 0;
+            text-align: center;
+            font-size: 13px;
+            font-weight: 500;
+            border-radius: 100px;
+            cursor: pointer;
+            color: var(--muted);
+            transition: all .2s;
+            letter-spacing: .02em;
+        }
+        .tab.active {
+            background: var(--surface);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        /* ── VIEWS ── */
+        .view { display: none; flex: 1; overflow: hidden; flex-direction: column; }
+        .view.active { display: flex; }
+
+        /* ══════════════════════
+           SWIPE VIEW
+        ══════════════════════ */
+        #view-swipe {
+            position: relative;
+            align-items: center;
+            justify-content: flex-end;
+            padding-bottom: 16px;
+        }
+
+        .deck {
+            position: absolute;
+            inset: 0 16px 120px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* card */
+        .card {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 28px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            padding: 28px;
+            display: flex;
+            flex-direction: column;
+            cursor: grab;
+            will-change: transform;
+            transition: box-shadow .2s;
+            overflow: hidden;
+            touch-action: none;
+        }
+        .card:active { cursor: grabbing; }
+
+        /* stacking visual */
+        .card:nth-child(2) {
+            transform: translateY(10px) scale(0.96);
+            opacity: .7;
+            pointer-events: none;
+        }
+        .card:nth-child(3) {
+            transform: translateY(20px) scale(0.92);
+            opacity: .4;
+            pointer-events: none;
+        }
+        .card:nth-child(n+4) { opacity: 0; pointer-events: none; }
+
+        /* card internals */
+        .card-avatar {
+            width: 52px; height: 52px;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 22px;
+            font-family: 'Fraunces', serif;
+            font-weight: 700;
+            flex-shrink: 0;
+            margin-bottom: 20px;
+        }
+        .card-username {
+            font-size: 13px;
+            color: var(--muted);
+            margin-bottom: 4px;
+        }
+        .card-name {
+            font-family: 'Fraunces', serif;
+            font-size: 28px;
+            font-weight: 700;
+            line-height: 1.1;
+            margin-bottom: 24px;
+        }
+
+        .card-divider {
+            width: 40px; height: 1px;
+            background: var(--border);
+            margin-bottom: 24px;
+        }
+
+        .card-label {
+            font-size: 10px;
+            letter-spacing: .12em;
+            text-transform: uppercase;
+            font-weight: 500;
+            margin-bottom: 6px;
+        }
+        .card-give-label { color: var(--give); }
+        .card-want-label { color: var(--want); }
+
+        .card-value {
+            font-size: 18px;
+            font-weight: 500;
+            line-height: 1.3;
+            margin-bottom: 20px;
+        }
+
+        .card-desc {
+            font-size: 14px;
+            color: var(--muted);
+            line-height: 1.5;
+            margin-top: auto;
+        }
+
+        /* swipe overlays */
+        .card-overlay-like,
+        .card-overlay-pass {
+            position: absolute;
+            top: 32px;
+            font-family: 'Fraunces', serif;
+            font-size: 32px;
+            font-weight: 700;
+            border: 3px solid;
+            padding: 6px 16px;
+            border-radius: 10px;
+            opacity: 0;
+            transform: rotate(-15deg);
+            pointer-events: none;
+        }
+        .card-overlay-like {
+            left: 28px;
+            color: var(--like);
+            border-color: var(--like);
+            transform: rotate(-15deg);
+        }
+        .card-overlay-pass {
+            right: 28px;
+            color: var(--pass);
+            border-color: var(--pass);
+            transform: rotate(15deg);
+        }
+
+        /* action buttons */
+        .actions {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            justify-content: center;
+            padding: 0 24px;
+            height: 100px;
+            flex-shrink: 0;
+        }
+        .action-btn {
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            transition: transform .15s, box-shadow .15s;
+            flex-shrink: 0;
+        }
+        .action-btn:active { transform: scale(.9); }
+
+        .btn-pass {
+            width: 60px; height: 60px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            font-size: 26px;
+        }
+        .btn-pass:hover { border-color: var(--pass); box-shadow: 0 0 0 4px rgba(239,68,68,.12); }
+
+        .btn-like {
+            width: 72px; height: 72px;
+            background: linear-gradient(135deg, var(--give), #38d67c);
+            font-size: 30px;
+            box-shadow: 0 8px 32px rgba(74,222,128,.25);
+        }
+        .btn-like:hover { box-shadow: 0 8px 40px rgba(74,222,128,.4); transform: scale(1.05); }
+
+        .btn-super {
+            width: 54px; height: 54px;
+            background: var(--surface);
+            border: 1px solid rgba(247,201,72,.3);
+            font-size: 22px;
+        }
+        .btn-super:hover { border-color: var(--want); box-shadow: 0 0 0 4px rgba(247,201,72,.1); }
+
+        /* empty state */
+        .empty-deck {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            color: var(--muted);
+        }
+        .empty-deck span { font-size: 52px; }
+        .empty-deck p { font-size: 16px; }
+
+        /* ══════════════════════
+           MY OFFERS VIEW
+        ══════════════════════ */
+        #view-my {
+            overflow-y: auto;
+            padding: 0 16px 100px;
+            gap: 12px;
+        }
+
+        .add-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 18px;
+            border: 1px dashed rgba(255,255,255,0.15);
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 15px;
+            color: var(--muted);
+            transition: all .2s;
+            flex-shrink: 0;
+        }
+        .add-btn:hover { border-color: var(--give); color: var(--give); }
+
+        .offer-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            flex-shrink: 0;
+        }
+        .offer-card-row { display: flex; align-items: flex-start; justify-content: space-between; }
+        .offer-card-give { font-size: 17px; font-weight: 500; }
+        .offer-card-want { font-size: 14px; color: var(--want); }
+        .del-btn {
+            background: none; border: none;
+            color: var(--muted); font-size: 20px; cursor: pointer;
+            line-height: 1;
+            padding: 0 0 0 12px;
+            flex-shrink: 0;
+        }
+        .del-btn:hover { color: var(--pass); }
+
+        /* ══════════════════════
+           CREATE VIEW (sheet)
+        ══════════════════════ */
+        #view-create {
+            overflow-y: auto;
+            padding: 8px 16px 100px;
+            gap: 16px;
+        }
+        .field-label {
+            font-size: 11px;
+            letter-spacing: .1em;
+            text-transform: uppercase;
+            color: var(--muted);
+            margin-bottom: 6px;
+            font-weight: 500;
+        }
+        .field-label.green { color: var(--give); }
+        .field-label.yellow { color: var(--want); }
+        .field-group { display: flex; flex-direction: column; }
+
+        input, textarea {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            color: var(--text);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 16px;
+            padding: 14px 16px;
+            outline: none;
+            transition: border-color .2s;
+            resize: none;
+        }
+        input:focus, textarea:focus { border-color: rgba(255,255,255,0.25); }
+
+        .publish-btn {
+            margin-top: 8px;
+            background: linear-gradient(135deg, var(--give), #38d67c);
+            border: none;
+            border-radius: 16px;
+            color: #0c160f;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 17px;
+            font-weight: 600;
+            padding: 18px;
+            cursor: pointer;
+            transition: opacity .2s, transform .15s;
+            flex-shrink: 0;
+        }
+        .publish-btn:hover { opacity: .9; }
+        .publish-btn:active { transform: scale(.97); }
+
+        /* ══════════════════════
+           MATCH POPUP
+        ══════════════════════ */
+        .match-overlay {
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,.85);
+            backdrop-filter: blur(12px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            padding: 24px;
+        }
+        .match-overlay.visible { display: flex; }
+        .match-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 28px;
+            padding: 36px 28px;
+            width: 100%;
+            max-width: 380px;
+            text-align: center;
+        }
+        .match-emoji { font-size: 56px; margin-bottom: 16px; }
+        .match-title {
+            font-family: 'Fraunces', serif;
+            font-size: 32px;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--give), var(--want));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 8px;
+        }
+        .match-sub { color: var(--muted); font-size: 15px; margin-bottom: 28px; }
+        .match-btns { display: flex; flex-direction: column; gap: 10px; }
+        .match-contact {
+            background: linear-gradient(135deg, var(--give), #38d67c);
+            border: none; border-radius: 14px;
+            color: #0c160f;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 16px; font-weight: 600;
+            padding: 15px; cursor: pointer;
+        }
+        .match-close {
+            background: none;
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            color: var(--muted);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 16px;
+            padding: 15px; cursor: pointer;
+        }
+
+        /* ── animations ── */
+        @keyframes cardIn {
+            from { opacity: 0; transform: scale(.95) translateY(16px); }
+            to   { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        .card { animation: cardIn .3s ease both; }
+        .card:nth-child(2) { animation-delay: .05s; }
+        .card:nth-child(3) { animation-delay: .1s; }
     </style>
 </head>
-<body class="bg-[#111111] text-white min-h-screen pb-20">
-    <!-- Header -->
-    <div class="sticky top-0 z-50 bg-[#111111] border-b border-white/10 px-6 py-4 flex items-center justify-between">
-        <div class="flex items-center gap-3">
-            <div class="w-10 h-10 bg-gradient-to-br from-neutral-700 to-neutral-900 rounded-xl"></div>
-            <h1 class="text-3xl font-semibold tracking-tighter">Дари</h1>
-        </div>
-        <div onclick="tg.close()" class="px-5 py-2 bg-white/10 hover:bg-white/20 rounded-3xl text-sm cursor-pointer flex items-center">Закрыть</div>
-    </div>
+<body>
 
-    <!-- Навигация -->
-    <div class="grid grid-cols-3 text-center border-b border-white/10 text-sm font-medium">
-        <button onclick="showTab(0)" class="nav-btn py-4 flex flex-col items-center gap-1 text-emerald-400">
-            Главная
-        </button>
-        <button onclick="showTab(1)" class="nav-btn py-4 flex flex-col items-center gap-1">
-            Мои дары
-        </button>
-        <button onclick="showTab(2)" class="nav-btn py-4 flex flex-col items-center gap-1">
-            Найти
-        </button>
+<header>
+    <div class="logo">Дари</div>
+    <div class="header-right">
+        <div class="icon-btn" onclick="showView('create')" title="Создать">✦</div>
     </div>
+</header>
 
-    <!-- TAB 0: Главная -->
-    <div id="tab-home" class="p-6">
-        <div class="text-center py-10">
-            <h2 class="text-5xl font-semibold tracking-tighter mb-4">Дари и получай</h2>
-            <p class="text-2xl text-gray-400">Без денег. Без налогов.<br>Только обмен.</p>
-            
-            <div class="mt-12 bg-gradient-to-br from-white/5 to-transparent border border-white/10 rounded-3xl p-8">
-                <p class="text-emerald-400 text-sm mb-3">ВАШ ПРИМЕР</p>
-                <p class="text-3xl leading-tight">Ферма • Клуб • Ресторан • Глэмпинг<br>Нужен репетитор по английскому?</p>
-                <p class="mt-8 text-gray-400">Опубликуйте дар — и приложение найдёт идеальный обмен.</p>
-            </div>
-            
-            <button onclick="showTab(1)" class="mt-12 w-full bg-gradient-to-r from-pink-400 to-emerald-400 text-white font-semibold py-6 rounded-3xl text-2xl active:scale-95 transition-all shadow-xl">Создать свой дар</button>
+<div class="tabs">
+    <div class="tab active" onclick="showView('swipe')" id="tab-swipe">Найти</div>
+    <div class="tab" onclick="showView('my')" id="tab-my-tab">Мои дары</div>
+    <div class="tab" onclick="showView('create')" id="tab-create">+ Создать</div>
+</div>
+
+<!-- ═══ SWIPE VIEW ═══ -->
+<div id="view-swipe" class="view active">
+    <div class="deck" id="deck">
+        <div class="empty-deck" id="empty-deck" style="display:none">
+            <span>🎁</span>
+            <p>Новые дары скоро появятся</p>
         </div>
     </div>
+    <div class="actions">
+        <button class="action-btn btn-pass" onclick="swipeCard('left')" title="Пропустить">✕</button>
+        <button class="action-btn btn-like" onclick="swipeCard('right')" title="Дарить!">♥</button>
+        <button class="action-btn btn-super" onclick="swipeCard('super')" title="Супер-мэтч">★</button>
+    </div>
+</div>
 
-    <!-- TAB 1: Мои дары -->
-    <div id="tab-my" class="p-6 hidden">
-        <h2 class="text-3xl font-semibold mb-6 flex items-center gap-3">Мои дары</h2>
-        <div id="my-offers-list" class="space-y-4"></div>
-        
-        <div class="mt-12 border border-dashed border-white/30 rounded-3xl p-8">
-            <div class="text-center mb-6">
-                <p class="text-5xl"></p>
-                <p class="font-semibold text-2xl mt-4">Новый дар</p>
-            </div>
-            <div class="space-y-6">
-                <div>
-                    <label class="text-xs uppercase text-emerald-400">Что я дарю</label>
-                    <input id="have-input" placeholder="Продукты с фермы / 5 часов в клубе / ..." 
-                           class="w-full mt-2 bg-transparent border border-white/10 rounded-xl px-4 py-4 focus:border-emerald-400 transition-all focus:outline-none text-lg">
+<!-- ═══ MY OFFERS VIEW ═══ -->
+<div id="view-my" class="view">
+    <div class="add-btn" onclick="showView('create')">
+        <span>＋</span> Опубликовать новый дар
+    </div>
+    <div id="my-list"></div>
+</div>
+
+<!-- ═══ CREATE VIEW ═══ -->
+<div id="view-create" class="view">
+    <div class="field-group">
+        <div class="field-label green">Что я дарю</div>
+        <input id="inp-have" placeholder="Продукты с фермы, 5 часов в клубе…" />
+    </div>
+    <div class="field-group">
+        <div class="field-label yellow">Что хочу получить</div>
+        <input id="inp-need" placeholder="Урок английского, ночь в глэмпинге…" />
+    </div>
+    <div class="field-group">
+        <div class="field-label">Детали (необязательно)</div>
+        <textarea id="inp-desc" rows="3" placeholder="Расскажите подробнее…"></textarea>
+    </div>
+    <button class="publish-btn" onclick="publishOffer()">Опубликовать дар →</button>
+</div>
+
+<!-- ═══ MATCH POPUP ═══ -->
+<div class="match-overlay" id="match-overlay">
+    <div class="match-card">
+        <div class="match-emoji">🎉</div>
+        <div class="match-title">Совпадение!</div>
+        <div class="match-sub" id="match-sub">Вы хотите обменяться</div>
+        <div class="match-btns">
+            <button class="match-contact" id="match-contact-btn">Написать</button>
+            <button class="match-close" onclick="closeMatch()">Позже</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ─── Telegram WebApp init ───
+    const tg = window.Telegram?.WebApp;
+    let currentUser = null;
+
+    if (tg) {
+        tg.ready();
+        tg.expand();
+        currentUser = tg.initDataUnsafe?.user;
+    }
+
+    // ─── Data ───
+    let deck = [];        // cards to show
+    let myOffers = JSON.parse(localStorage.getItem('dari_offers') || '[]');
+
+    const DEMO = [
+        { id: 1, telegram_id: 111, username: 'anna_farm', name: 'Аня', give: 'Органические овощи с фермы', want: 'Уроки йоги или медитации', desc: 'Доставлю сама по Москве, 5 кг в неделю', color: '#c5f0b8' },
+        { id: 2, telegram_id: 222, username: 'ivan_code', name: 'Иван', give: 'Разработка лендинга', want: 'Фотосессия или видеосъёмка', desc: 'React/Next.js, опыт 6 лет', color: '#ffd97a' },
+        { id: 3, telegram_id: 333, username: 'masha_photo', name: 'Маша', give: 'Портретная фотосессия (2 ч)', want: 'Массаж или SPA-процедуры', desc: 'Профессиональное оборудование, lightroom', color: '#f5b8d6' },
+        { id: 4, telegram_id: 444, username: 'glamp_pro', name: 'Глэмпинг Лес', give: 'Ночь в глэмпинге для двоих', want: 'SMM-ведение или контент', desc: 'Подмосковье, 2 часа от Москвы', color: '#b8d8f0' },
+        { id: 5, telegram_id: 555, username: 'chef_dmitry', name: 'Дима', give: 'Мастер-класс по итальянской кухне', want: 'Настройка компьютера / IT-помощь', desc: 'На своей кухне, 3-4 человека', color: '#e8c8a0' },
+    ];
+
+    function init() {
+        deck = [...DEMO];
+        renderDeck();
+        renderMyOffers();
+
+        if (tg) {
+            tg.sendData?.(JSON.stringify({ type: 'get_listings' }));
+        }
+    }
+
+    // ─── Views ───
+    function showView(v) {
+        document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+
+        document.getElementById(`view-${v}`).classList.add('active');
+        const tabMap = { swipe: 'tab-swipe', my: 'tab-my-tab', create: 'tab-create' };
+        document.getElementById(tabMap[v])?.classList.add('active');
+
+        if (v === 'my') renderMyOffers();
+    }
+
+    // ─── Deck rendering ───
+    function renderDeck() {
+        const container = document.getElementById('deck');
+        const empty = document.getElementById('empty-deck');
+        // clear cards
+        container.querySelectorAll('.card').forEach(c => c.remove());
+
+        if (!deck.length) {
+            empty.style.display = 'flex';
+            return;
+        }
+        empty.style.display = 'none';
+
+        // render top 3
+        const visible = deck.slice(0, 3).reverse();
+        visible.forEach((data, i) => {
+            const card = buildCard(data);
+            container.appendChild(card);
+            if (i === visible.length - 1) attachSwipe(card, data);
+        });
+    }
+
+    const AVATARS = ['🌿','🎨','📸','🏕️','🍝','🎵','💻','🌸','🏡','✈️'];
+
+    function buildCard(data) {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.dataset.id = data.id;
+
+        const avatarEmoji = AVATARS[data.id % AVATARS.length];
+        const avatarBg = data.color + '22';
+        const avatarColor = data.color;
+
+        card.innerHTML = `
+            <div class="card-overlay-like">Дарю ♥</div>
+            <div class="card-overlay-pass">Мимо ✕</div>
+            <div class="card-avatar" style="background:${avatarBg};color:${avatarColor}">${avatarEmoji}</div>
+            <div class="card-username">@${data.username}</div>
+            <div class="card-name">${data.name}</div>
+            <div class="card-divider"></div>
+            <div class="card-label card-give-label">Дарит</div>
+            <div class="card-value">${data.give}</div>
+            <div class="card-label card-want-label">Хочет</div>
+            <div class="card-value">${data.want}</div>
+            ${data.desc ? `<div class="card-desc">${data.desc}</div>` : ''}
+        `;
+        return card;
+    }
+
+    function attachSwipe(card, data) {
+        let startX = 0, startY = 0, dx = 0, isDragging = false;
+        const overlayLike = card.querySelector('.card-overlay-like');
+        const overlayPass = card.querySelector('.card-overlay-pass');
+
+        function onStart(e) {
+            isDragging = true;
+            const point = e.touches ? e.touches[0] : e;
+            startX = point.clientX;
+            startY = point.clientY;
+            card.style.transition = 'none';
+        }
+
+        function onMove(e) {
+            if (!isDragging) return;
+            const point = e.touches ? e.touches[0] : e;
+            dx = point.clientX - startX;
+            const dy = point.clientY - startY;
+            const rot = dx * 0.08;
+            card.style.transform = `translateX(${dx}px) translateY(${dy * 0.3}px) rotate(${rot}deg)`;
+
+            const progress = Math.min(Math.abs(dx) / 100, 1);
+            if (dx > 0) {
+                overlayLike.style.opacity = progress;
+                overlayPass.style.opacity = 0;
+            } else {
+                overlayPass.style.opacity = progress;
+                overlayLike.style.opacity = 0;
+            }
+            e.preventDefault();
+        }
+
+        function onEnd() {
+            if (!isDragging) return;
+            isDragging = false;
+            card.style.transition = 'transform .35s cubic-bezier(.25,.46,.45,.94), opacity .35s';
+
+            if (Math.abs(dx) > 100) {
+                const dir = dx > 0 ? 'right' : 'left';
+                flyOut(card, data, dir);
+            } else {
+                card.style.transform = '';
+                overlayLike.style.opacity = 0;
+                overlayPass.style.opacity = 0;
+            }
+            dx = 0;
+        }
+
+        card.addEventListener('mousedown', onStart);
+        card.addEventListener('touchstart', onStart, { passive: false });
+        window.addEventListener('mousemove', onMove);
+        window.addEventListener('touchmove', onMove, { passive: false });
+        window.addEventListener('mouseup', onEnd);
+        window.addEventListener('touchend', onEnd);
+    }
+
+    function flyOut(card, data, dir) {
+        const x = dir === 'right' ? 600 : -600;
+        const rot = dir === 'right' ? 30 : -30;
+        card.style.transform = `translateX(${x}px) rotate(${rot}deg)`;
+        card.style.opacity = '0';
+
+        setTimeout(() => {
+            deck = deck.filter(d => d.id !== data.id);
+            if (dir === 'right') onLike(data);
+            renderDeck();
+        }, 350);
+    }
+
+    function swipeCard(dir) {
+        if (!deck.length) return;
+        const topCard = document.querySelector('.card:last-child');
+        const data = deck[deck.length - 1];
+        if (!topCard) return;
+
+        if (dir === 'super') {
+            topCard.style.transition = 'transform .35s ease, opacity .35s';
+            topCard.style.transform = 'translateY(-600px) scale(0.9)';
+            topCard.style.opacity = '0';
+            setTimeout(() => {
+                deck = deck.filter(d => d.id !== data.id);
+                onLike(data, true);
+                renderDeck();
+            }, 350);
+        } else {
+            flyOut(topCard, data, dir);
+        }
+    }
+
+    function onLike(data, isSuper = false) {
+        tg?.HapticFeedback?.impactOccurred('medium');
+        tg?.sendData?.(JSON.stringify({ type: 'like', partner_id: data.telegram_id, listing_id: data.id }));
+
+        // Show match popup (demo: always match)
+        setTimeout(() => showMatch(data, isSuper), 200);
+    }
+
+    // ─── Match popup ───
+    function showMatch(data, isSuper) {
+        document.getElementById('match-sub').textContent =
+            `${isSuper ? '⭐ Супер-мэтч с' : 'Мэтч с'} @${data.username}`;
+        document.getElementById('match-contact-btn').onclick = () => {
+            window.open(`https://t.me/${data.username}`, '_blank');
+        };
+        document.getElementById('match-overlay').classList.add('visible');
+    }
+
+    function closeMatch() {
+        document.getElementById('match-overlay').classList.remove('visible');
+    }
+
+    // ─── My offers ───
+    function renderMyOffers() {
+        const list = document.getElementById('my-list');
+        list.innerHTML = '';
+
+        if (!myOffers.length) {
+            list.innerHTML = '<div style="text-align:center;color:var(--muted);padding:32px 0;font-size:14px">Пока нет даров — создайте первый!</div>';
+            return;
+        }
+
+        myOffers.forEach(o => {
+            const el = document.createElement('div');
+            el.className = 'offer-card';
+            el.innerHTML = `
+                <div class="offer-card-row">
+                    <div>
+                        <div class="card-label card-give-label" style="margin-bottom:4px">Дарю</div>
+                        <div class="offer-card-give">${o.give}</div>
+                    </div>
+                    <button class="del-btn" onclick="deleteOffer(${o.id})">×</button>
                 </div>
                 <div>
-                    <label class="text-xs uppercase text-amber-400">Что я хочу получить</label>
-                    <input id="need-input" placeholder="Уроки английского / ночь в глэмпинге / ..." 
-                           class="w-full mt-2 bg-transparent border border-white/10 rounded-xl px-4 py-4 focus:border-emerald-400 transition-all focus:outline-none text-lg">
+                    <div class="card-label card-want-label" style="margin-bottom:4px">Хочу</div>
+                    <div class="offer-card-want">${o.want}</div>
                 </div>
-                <div>
-                    <label class="text-xs uppercase text-gray-400">Комментарий</label>
-                    <textarea id="desc-input" rows="3" placeholder="Дополнительные детали обмена..." 
-                              class="w-full mt-2 bg-transparent border border-white/10 rounded-xl px-4 py-4 focus:border-emerald-400 transition-all focus:outline-none resize-none"></textarea>
-                </div>
-            </div>
-        </div>
-    </div>
+                ${o.desc ? `<div class="card-desc">${o.desc}</div>` : ''}
+            `;
+            list.appendChild(el);
+        });
+    }
 
-    <!-- TAB 2: Поиск -->
-    <div id="tab-search" class="p-6 hidden">
-        <h2 class="text-3xl font-semibold mb-6">Живые дары</h2>
-        <div id="all-listings" class="space-y-6"></div>
-    </div>
+    function deleteOffer(id) {
+        myOffers = myOffers.filter(o => o.id !== id);
+        localStorage.setItem('dari_offers', JSON.stringify(myOffers));
+        renderMyOffers();
+    }
 
-    <!-- MATCH PANEL -->
-    <div id="match-panel" class="fixed inset-0 bg-black/80 backdrop-blur-xl hidden items-center justify-center z-50">
-        <div class="bg-[#111] border border-white/10 rounded-2xl p-8 w-[90%] max-w-md">
-            <h3 class="text-xl font-semibold mb-4">Совпадение</h3>
-            <p id="match-text" class="text-gray-400 mb-6"></p>
-            <div class="flex gap-3">
-                <button id="match-contact" class="flex-1 bg-white text-black py-3 rounded-xl">Написать</button>
-                <button onclick="closeMatchPanel()" class="flex-1 border border-white/20 py-3 rounded-xl">Закрыть</button>
-            </div>
-        </div>
-    </div>
+    // ─── Publish ───
+    function publishOffer() {
+        const give = document.getElementById('inp-have').value.trim();
+        const want = document.getElementById('inp-need').value.trim();
+        const desc = document.getElementById('inp-desc').value.trim();
 
-    <div class="fixed bottom-0 left-0 right-0 bg-[#111111] text-center py-3 text-xs text-gray-500 border-t border-white/10">
-        Dari
-    </div>
+        if (!give || !want) {
+            alert('Заполните «Что дарю» и «Что хочу»');
+            return;
+        }
+
+        const offer = {
+            id: Date.now(),
+            telegram_id: currentUser?.id || 0,
+            username: currentUser?.username || 'me',
+            name: currentUser?.first_name || 'Я',
+            give, want, desc,
+            color: '#b8f0a0'
+        };
+
+        myOffers.unshift(offer);
+        localStorage.setItem('dari_offers', JSON.stringify(myOffers));
+
+        tg?.sendData?.(JSON.stringify({
+            type: 'new_offer',
+            offer: { ...offer, have: give, need: want },
+            user: currentUser,
+            initData: tg?.initData
+        }));
+
+        document.getElementById('inp-have').value = '';
+        document.getElementById('inp-need').value = '';
+        document.getElementById('inp-desc').value = '';
+
+        showView('my');
+    }
+
+    // ─── Bot events ───
+    tg?.onEvent?.('message', (e) => {
+        try {
+            const data = JSON.parse(e.data);
+            if (data.type === 'listings') {
+                deck = data.listings.map(l => ({ ...l, give: l.have, want: l.need }));
+                renderDeck();
+            }
+            if (data.type === 'match') showMatch({ username: data.username }, false);
+        } catch {}
+    });
+
+    init();
+</script>
 </body>
 </html>
