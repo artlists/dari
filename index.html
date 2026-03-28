@@ -116,7 +116,7 @@
             container.innerHTML = '';
 
             if (myOffers.length === 0) {
-                container.innerHTML = `<div class="text-center py-12 text-gray-400"><p class="text-2xl">🎁</p><p class="mt-4">Пока нет ваших даров</p><p class="text-sm">Опубликуйте первый и начните обмениваться</p></div>`;
+                container.innerHTML = `<div class="text-center py-12 text-gray-400"><p class="text-2xl"></p><p class="mt-4">Пока нет ваших даров</p><p class="text-sm">Опубликуйте первый и начните обмениваться</p></div>`;
                 return;
             }
 
@@ -131,7 +131,7 @@
                             ${offer.desc ? `<p class="mt-3 text-sm text-gray-400">${offer.desc}</p>` : ''}
                             <div class="text-xs text-gray-500 mt-4">ID: ${offer.telegram_id}</div>
                         </div>
-                        <button onclick="deleteOffer(${offer.id}); event.stopImmediatePropagation()" class="text-red-400 text-2xl leading-none">✕</button>
+                        <button onclick="deleteOffer(${offer.id}); event.stopImmediatePropagation()" class="text-red-400 text-2xl leading-none">Закрыть</button>
                     </div>
                 `;
                 container.appendChild(div);
@@ -144,10 +144,9 @@
 
             fakeListings.forEach(listing => {
                 const card = document.createElement('div');
-                card.className = 'bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl p-6 mb-6 cursor-pointer hover:border-emerald-400 transition-all';
+                card.className = 'bg-transparent border border-white/10 rounded-2xl p-6 mb-6 cursor-pointer hover:border-emerald-400 transition-all';
                 card.innerHTML = `
                     <div class="flex items-center gap-3 mb-5">
-                        <div class="w-12 h-12 bg-gradient-to-br from-pink-400 to-emerald-400 rounded-3xl flex items-center justify-center text-3xl shadow-inner">🎁</div>
                         <div class="flex-1">
                             <div class="font-semibold">@${listing.username}</div>
                             <div class="text-sm text-gray-400">${listing.name}</div>
@@ -165,7 +164,7 @@
                     ${listing.desc ? `<p class="text-sm text-gray-400 mt-5">${listing.desc}</p>` : ''}
                     
                     <div class="grid grid-cols-2 gap-4 mt-8">
-                        <button onclick="likeListing(${listing.id}); event.stopImmediatePropagation()" class="bg-emerald-500 hover:bg-emerald-600 py-5 rounded-3xl font-semibold text-xl active:scale-95 transition-all">🎁 Дарить!</button>
+                        <button onclick="likeListing(${listing.id}); event.stopImmediatePropagation()" class="bg-emerald-500 hover:bg-emerald-600 py-5 rounded-3xl font-semibold text-xl active:scale-95 transition-all">Дарить!</button>
                         <button onclick="passListing(${listing.id}); event.stopImmediatePropagation()" class="border border-white/30 hover:border-white/60 py-5 rounded-3xl font-semibold text-xl active:scale-95 transition-all">Пропустить</button>
                     </div>
                 `;
@@ -181,14 +180,7 @@
 
             const matchChance = Math.random();
             if (matchChance > 0.35) {
-                tg.showPopup({
-                    title: '🔥 МАТЧ!',
-                    message: `Отлично! @${listing.username} тоже хочет обменяться!\n\nTelegram ID: ${listing.telegram_id}\n\nМожете сразу написать ему.`,
-                    buttons: [
-                        {type: 'default', text: `Написать @${listing.username}`, id: 'contact'},
-                        {type: 'close'}
-                    ]
-                });
+                openMatchPanel(listing.username);
 
                 // Отправляем матч в бот с telegram_id
                 tg.sendData(JSON.stringify({
@@ -200,6 +192,23 @@
             } else {
                 tg.showAlert('Не подошло 😔 Но есть ещё сотни даров!');
             }
+        }
+        // MATCH PANEL functions
+        function openMatchPanel(username) {
+            document.getElementById('match-text').innerText = `Вы совпали с @${username}`;
+            const panel = document.getElementById('match-panel');
+            panel.classList.remove('hidden');
+            panel.classList.add('flex');
+
+            document.getElementById('match-contact').onclick = () => {
+                window.open(`https://t.me/${username}`, '_blank');
+            };
+        }
+
+        function closeMatchPanel() {
+            const panel = document.getElementById('match-panel');
+            panel.classList.add('hidden');
+            panel.classList.remove('flex');
         }
 
         function passListing(id) {
@@ -244,22 +253,22 @@
     <!-- Header -->
     <div class="sticky top-0 z-50 bg-[#111111] border-b border-white/10 px-6 py-4 flex items-center justify-between">
         <div class="flex items-center gap-3">
-            <div class="w-10 h-10 bg-gradient-to-br from-pink-400 to-emerald-400 rounded-3xl flex items-center justify-center text-4xl shadow-inner">🎁</div>
+            <div class="w-10 h-10 bg-gradient-to-br from-neutral-700 to-neutral-900 rounded-xl"></div>
             <h1 class="text-3xl font-semibold tracking-tighter">Дари</h1>
         </div>
-        <div onclick="tg.close()" class="px-5 py-2 bg-white/10 hover:bg-white/20 rounded-3xl text-sm cursor-pointer flex items-center">✕ Закрыть</div>
+        <div onclick="tg.close()" class="px-5 py-2 bg-white/10 hover:bg-white/20 rounded-3xl text-sm cursor-pointer flex items-center">Закрыть</div>
     </div>
 
     <!-- Навигация -->
     <div class="grid grid-cols-3 text-center border-b border-white/10 text-sm font-medium">
         <button onclick="showTab(0)" class="nav-btn py-4 flex flex-col items-center gap-1 text-emerald-400">
-            <span class="text-3xl">🏠</span>Главная
+            Главная
         </button>
         <button onclick="showTab(1)" class="nav-btn py-4 flex flex-col items-center gap-1">
-            <span class="text-3xl">📋</span>Мои дары
+            Мои дары
         </button>
         <button onclick="showTab(2)" class="nav-btn py-4 flex flex-col items-center gap-1">
-            <span class="text-3xl">🔍</span>Найти
+            Найти
         </button>
     </div>
 
@@ -281,29 +290,29 @@
 
     <!-- TAB 1: Мои дары -->
     <div id="tab-my" class="p-6 hidden">
-        <h2 class="text-3xl font-semibold mb-6 flex items-center gap-3"><span>📋</span>Мои дары</h2>
+        <h2 class="text-3xl font-semibold mb-6 flex items-center gap-3">Мои дары</h2>
         <div id="my-offers-list" class="space-y-4"></div>
         
         <div class="mt-12 border border-dashed border-white/30 rounded-3xl p-8">
             <div class="text-center mb-6">
-                <p class="text-5xl">🎁</p>
+                <p class="text-5xl"></p>
                 <p class="font-semibold text-2xl mt-4">Новый дар</p>
             </div>
             <div class="space-y-6">
                 <div>
                     <label class="text-xs uppercase text-emerald-400">Что я дарю</label>
                     <input id="have-input" placeholder="Продукты с фермы / 5 часов в клубе / ..." 
-                           class="w-full mt-2 bg-white/10 border border-white/20 rounded-3xl px-6 py-5 focus:outline-none text-lg">
+                           class="w-full mt-2 bg-transparent border border-white/10 rounded-xl px-4 py-4 focus:border-emerald-400 transition-all focus:outline-none text-lg">
                 </div>
                 <div>
                     <label class="text-xs uppercase text-amber-400">Что я хочу получить</label>
                     <input id="need-input" placeholder="Уроки английского / ночь в глэмпинге / ..." 
-                           class="w-full mt-2 bg-white/10 border border-white/20 rounded-3xl px-6 py-5 focus:outline-none text-lg">
+                           class="w-full mt-2 bg-transparent border border-white/10 rounded-xl px-4 py-4 focus:border-emerald-400 transition-all focus:outline-none text-lg">
                 </div>
                 <div>
                     <label class="text-xs uppercase text-gray-400">Комментарий</label>
                     <textarea id="desc-input" rows="3" placeholder="Дополнительные детали обмена..." 
-                              class="w-full mt-2 bg-white/10 border border-white/20 rounded-3xl px-6 py-5 focus:outline-none resize-none"></textarea>
+                              class="w-full mt-2 bg-transparent border border-white/10 rounded-xl px-4 py-4 focus:border-emerald-400 transition-all focus:outline-none resize-none"></textarea>
                 </div>
             </div>
         </div>
@@ -311,12 +320,24 @@
 
     <!-- TAB 2: Поиск -->
     <div id="tab-search" class="p-6 hidden">
-        <h2 class="text-3xl font-semibold mb-6">🔥 Живые дары</h2>
+        <h2 class="text-3xl font-semibold mb-6">Живые дары</h2>
         <div id="all-listings" class="space-y-6"></div>
     </div>
 
+    <!-- MATCH PANEL -->
+    <div id="match-panel" class="fixed inset-0 bg-black/80 backdrop-blur-xl hidden items-center justify-center z-50">
+        <div class="bg-[#111] border border-white/10 rounded-2xl p-8 w-[90%] max-w-md">
+            <h3 class="text-xl font-semibold mb-4">Совпадение</h3>
+            <p id="match-text" class="text-gray-400 mb-6"></p>
+            <div class="flex gap-3">
+                <button id="match-contact" class="flex-1 bg-white text-black py-3 rounded-xl">Написать</button>
+                <button onclick="closeMatchPanel()" class="flex-1 border border-white/20 py-3 rounded-xl">Закрыть</button>
+            </div>
+        </div>
+    </div>
+
     <div class="fixed bottom-0 left-0 right-0 bg-[#111111] text-center py-3 text-xs text-gray-500 border-t border-white/10">
-        Дари • Все данные с telegram_id • Версия 2.0
+        Dari
     </div>
 </body>
 </html>
