@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Дари — дари и получай</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        const tg = window.Telegram.WebApp;
+        let currentUser = null;
+
+        function initTelegram() {
+            tg.ready();
+            tg.expand();
+            
+            // Получаем полные данные пользователя (telegram_id обязателен)
+            currentUser = tg.initDataUnsafe.user;
+            if (!currentUser || !currentUser.id) {
+                tg.showAlert("Ошибка: не удалось получить Telegram ID. Попробуйте перезапустить приложение.");
+                return;
+            }
+            
+            console.log('✅ Дари запущено. Telegram ID:', currentUser.id, 'Username:', currentUser.username);
+            
+            // Главная кнопка
+            tg.MainButton.setText("Опубликовать дар");
+            tg.MainButton.onClick(() => createOffer());
+            tg.MainButton.show();
+            
+            // Тема
+            document.documentElement.style.setProperty('--tg-theme-bg-color', tg.colorScheme === 'dark' ? '#111111' : '#ffffff');
+            document.documentElement.style.setProperty('--tg-theme-text-color', tg.colorScheme === 'dark' ? '#ffffff' : '#000000');
+        }
+
+        function initTailwind() {
+            tailwind.config = { content: [] };
+        }
+
+        // Демо-объявления
+        let fakeListings = [
+            { id: 1, username: "ferma_kras", name: "Ферма «Красная»", telegram_id: 123456789, have: "Свежие овощи, яйца, молоко (каждую неделю)", need: "10 занятий английским", desc: "Готов дарить продукты" },
+            { id: 2, username: "club_pixel", name: "Клуб «Pixel»", telegram_id: 987654321, have: "10 часов игры + кофе", need: "Продукты с фермы на 7000 ₽", desc: "" },
+            { id: 3, username: "english_tutor", name: "Анна • Репетитор", telegram_id: 555666777, have: "Репетитор по английскому (онлайн)", need: "2 ночи в глэмпинге", desc: "Могу провести 8 занятий" },
+            { id: 4, username: "glamping_sun", name: "Глэмпинг «Солнечный»", telegram_id: 111222333, have: "Номер на 2 ночи", need: "Ужин в ресторане на 4 человека", desc: "" },
+            { id: 5, username: "rest_vkus", name: "Ресторан «Вкусно»", telegram_id: 444555666, have: "Ужин на 4 персоны", need: "10 часов в компьютерном клубе", desc: "" }
+        ];
+
+        let myOffers = [];
+
+        function loadMyOffers() {
+            const saved = localStorage.getItem('dari_myOffers');
+            if (saved) myOffers = JSON.parse(saved);
+            renderMyOffers();
+        }
+
+        function saveMyOffers() {
+            localStorage.setItem('dari_myOffers', JSON.stringify(myOffers));
+        }
+
+        function createOffer() {
+            const have = document.getElementById('have-input').value.trim();
+            const need = document.getElementById('need-input').value.trim();
+            const desc = document.getElementById('desc-input').value.trim();
+
+            if (!have || !need) {
+                tg.showAlert("Заполните «Что дарю» и «Что хочу»");
+                return;
+            }
+
+            const newOffer = {
+                id: Date.now(),
+                telegram_id: currentUser.id,           // ← КЛЮЧЕВОЕ: telegram_id
+                username: currentUser.username || `user${currentUser.id}`,
+                name: currentUser.first_name || 'Пользователь',
+                have: have,
+                need: need,
+                desc: desc || 'Без описания',
+                created: new Date().toISOString()
+            };
+
+            myOffers.unshift(newOffer);
+            saveMyOffers();
+            renderMyOffers();
+
+            // Отправляем в бот ВСЁ с telegram_id
+            const payload = {
+                type: 'new_offer',
+                offer: newOffer,
+                user: currentUser,
+                initData: tg.initData   // полные безопасные данные
+            };
+            tg.sendData(JSON.stringify(payload));
+
+            tg.showPopup({
+                title: '🎁 Дар опубликован!',
+                message: 'Объявление отправлено. Ищем того, кто хочет обменяться.',
+                buttons: [{type: 'close'}]
+            });
+
+            // Очистка
+            document.getElementById('have-input').value = '';
+            document.getElementById('need-input').value = '';
+            document.getElementById('desc-input').value = '';
+            
+            showTab(1);
+        }
+
+        function deleteOffer(id) {
+            myOffers = myOffers.filter(o => o.id !== id);
+            saveMyOffers();
+            renderMyOffers();
+        }
+
+        function renderMyOffers() {
+            const container = document.getElementById('my-offers-list');
+            container.innerHTML = '';
+
+            if (myOffers.length === 0) {
+                container.innerHTML = `<div class="text-center py-12 text-gray-400"><p class="text-2xl">🎁</p><p class="mt-4">Пока нет ваших даров</p><p class="text-sm">Опубликуйте первый и начните обмениваться</p></div>`;
+                return;
+            }
+
+            myOffers.forEach(offer => {
+                const div = document.createElement('div');
+                div.className = 'bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl p-6 mb-4';
+                div.innerHTML = `
+                    <div class="flex justify-between">
+                        <div class="flex-1">
+                            <div class="font-semibold text-lg">Дарю: ${offer.have}</div>
+                            <div class="text-emerald-400 mt-1">Хочу: ${offer.need}</div>
+                            ${offer.desc ? `<p class="mt-3 text-sm text-gray-400">${offer.desc}</p>` : ''}
+                            <div class="text-xs text-gray-500 mt-4">ID: ${offer.telegram_id}</div>
+                        </div>
+                        <button onclick="deleteOffer(${offer.id}); event.stopImmediatePropagation()" class="text-red-400 text-2xl leading-none">✕</button>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function renderAllListings() {
+            const container = document.getElementById('all-listings');
+            container.innerHTML = '';
+
+            fakeListings.forEach(listing => {
+                const card = document.createElement('div');
+                card.className = 'bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl p-6 mb-6 cursor-pointer hover:border-emerald-400 transition-all';
+                card.innerHTML = `
+                    <div class="flex items-center gap-3 mb-5">
+                        <div class="w-12 h-12 bg-gradient-to-br from-pink-400 to-emerald-400 rounded-3xl flex items-center justify-center text-3xl shadow-inner">🎁</div>
+                        <div class="flex-1">
+                            <div class="font-semibold">@${listing.username}</div>
+                            <div class="text-sm text-gray-400">${listing.name}</div>
+                        </div>
+                        <div class="text-xs bg-white/10 px-3 py-1 rounded-2xl">${listing.telegram_id}</div>
+                    </div>
+                    <div class="mb-4">
+                        <span class="uppercase text-xs tracking-widest text-emerald-400">Дарю</span>
+                        <div class="font-medium text-lg">${listing.have}</div>
+                    </div>
+                    <div>
+                        <span class="uppercase text-xs tracking-widest text-amber-400">Хочу</span>
+                        <div class="font-medium text-lg">${listing.need}</div>
+                    </div>
+                    ${listing.desc ? `<p class="text-sm text-gray-400 mt-5">${listing.desc}</p>` : ''}
+                    
+                    <div class="grid grid-cols-2 gap-4 mt-8">
+                        <button onclick="likeListing(${listing.id}); event.stopImmediatePropagation()" class="bg-emerald-500 hover:bg-emerald-600 py-5 rounded-3xl font-semibold text-xl active:scale-95 transition-all">🎁 Дарить!</button>
+                        <button onclick="passListing(${listing.id}); event.stopImmediatePropagation()" class="border border-white/30 hover:border-white/60 py-5 rounded-3xl font-semibold text-xl active:scale-95 transition-all">Пропустить</button>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function likeListing(id) {
+            const listing = fakeListings.find(l => l.id === id);
+            if (!listing) return;
+
+            tg.HapticFeedback.impactOccurred('medium');
+
+            const matchChance = Math.random();
+            if (matchChance > 0.35) {
+                tg.showPopup({
+                    title: '🔥 МАТЧ!',
+                    message: `Отлично! @${listing.username} тоже хочет обменяться!\n\nTelegram ID: ${listing.telegram_id}\n\nМожете сразу написать ему.`,
+                    buttons: [
+                        {type: 'default', text: `Написать @${listing.username}`, id: 'contact'},
+                        {type: 'close'}
+                    ]
+                });
+
+                // Отправляем матч в бот с telegram_id
+                tg.sendData(JSON.stringify({
+                    type: 'match',
+                    my_id: currentUser.id,
+                    partner_id: listing.telegram_id,
+                    partner: listing
+                }));
+            } else {
+                tg.showAlert('Не подошло 😔 Но есть ещё сотни даров!');
+            }
+        }
+
+        function passListing(id) {
+            tg.HapticFeedback.impactOccurred('light');
+        }
+
+        function showTab(tab) {
+            document.getElementById('tab-home').classList.add('hidden');
+            document.getElementById('tab-my').classList.add('hidden');
+            document.getElementById('tab-search').classList.add('hidden');
+
+            if (tab === 0) document.getElementById('tab-home').classList.remove('hidden');
+            if (tab === 1) {
+                document.getElementById('tab-my').classList.remove('hidden');
+                renderMyOffers();
+            }
+            if (tab === 2) {
+                document.getElementById('tab-search').classList.remove('hidden');
+                renderAllListings();
+            }
+
+            document.querySelectorAll('.nav-btn').forEach((btn, i) => {
+                btn.classList.toggle('text-emerald-400', i === tab);
+            });
+        }
+
+        window.onload = function() {
+            initTelegram();
+            initTailwind();
+            loadMyOffers();
+            renderAllListings();
+            
+            console.log('%c🚀 Дари — улучшенная версия готова. Telegram ID сохранён во всех данных.', 'color:#10b981; font-weight:bold');
+        };
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;display=swap');
+        body { font-family: 'Inter', system-ui, sans-serif; }
+    </style>
+</head>
+<body class="bg-[#111111] text-white min-h-screen pb-20">
+    <!-- Header -->
+    <div class="sticky top-0 z-50 bg-[#111111] border-b border-white/10 px-6 py-4 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 bg-gradient-to-br from-pink-400 to-emerald-400 rounded-3xl flex items-center justify-center text-4xl shadow-inner">🎁</div>
+            <h1 class="text-3xl font-semibold tracking-tighter">Дари</h1>
+        </div>
+        <div onclick="tg.close()" class="px-5 py-2 bg-white/10 hover:bg-white/20 rounded-3xl text-sm cursor-pointer flex items-center">✕ Закрыть</div>
+    </div>
+
+    <!-- Навигация -->
+    <div class="grid grid-cols-3 text-center border-b border-white/10 text-sm font-medium">
+        <button onclick="showTab(0)" class="nav-btn py-4 flex flex-col items-center gap-1 text-emerald-400">
+            <span class="text-3xl">🏠</span>Главная
+        </button>
+        <button onclick="showTab(1)" class="nav-btn py-4 flex flex-col items-center gap-1">
+            <span class="text-3xl">📋</span>Мои дары
+        </button>
+        <button onclick="showTab(2)" class="nav-btn py-4 flex flex-col items-center gap-1">
+            <span class="text-3xl">🔍</span>Найти
+        </button>
+    </div>
+
+    <!-- TAB 0: Главная -->
+    <div id="tab-home" class="p-6">
+        <div class="text-center py-10">
+            <h2 class="text-5xl font-semibold tracking-tighter mb-4">Дари и получай</h2>
+            <p class="text-2xl text-gray-400">Без денег. Без налогов.<br>Только обмен.</p>
+            
+            <div class="mt-12 bg-gradient-to-br from-white/5 to-transparent border border-white/10 rounded-3xl p-8">
+                <p class="text-emerald-400 text-sm mb-3">ВАШ ПРИМЕР</p>
+                <p class="text-3xl leading-tight">Ферма • Клуб • Ресторан • Глэмпинг<br>Нужен репетитор по английскому?</p>
+                <p class="mt-8 text-gray-400">Опубликуйте дар — и приложение найдёт идеальный обмен.</p>
+            </div>
+            
+            <button onclick="showTab(1)" class="mt-12 w-full bg-gradient-to-r from-pink-400 to-emerald-400 text-white font-semibold py-6 rounded-3xl text-2xl active:scale-95 transition-all shadow-xl">Создать свой дар</button>
+        </div>
+    </div>
+
+    <!-- TAB 1: Мои дары -->
+    <div id="tab-my" class="p-6 hidden">
+        <h2 class="text-3xl font-semibold mb-6 flex items-center gap-3"><span>📋</span>Мои дары</h2>
+        <div id="my-offers-list" class="space-y-4"></div>
+        
+        <div class="mt-12 border border-dashed border-white/30 rounded-3xl p-8">
+            <div class="text-center mb-6">
+                <p class="text-5xl">🎁</p>
+                <p class="font-semibold text-2xl mt-4">Новый дар</p>
+            </div>
+            <div class="space-y-6">
+                <div>
+                    <label class="text-xs uppercase text-emerald-400">Что я дарю</label>
+                    <input id="have-input" placeholder="Продукты с фермы / 5 часов в клубе / ..." 
+                           class="w-full mt-2 bg-white/10 border border-white/20 rounded-3xl px-6 py-5 focus:outline-none text-lg">
+                </div>
+                <div>
+                    <label class="text-xs uppercase text-amber-400">Что я хочу получить</label>
+                    <input id="need-input" placeholder="Уроки английского / ночь в глэмпинге / ..." 
+                           class="w-full mt-2 bg-white/10 border border-white/20 rounded-3xl px-6 py-5 focus:outline-none text-lg">
+                </div>
+                <div>
+                    <label class="text-xs uppercase text-gray-400">Комментарий</label>
+                    <textarea id="desc-input" rows="3" placeholder="Дополнительные детали обмена..." 
+                              class="w-full mt-2 bg-white/10 border border-white/20 rounded-3xl px-6 py-5 focus:outline-none resize-none"></textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 2: Поиск -->
+    <div id="tab-search" class="p-6 hidden">
+        <h2 class="text-3xl font-semibold mb-6">🔥 Живые дары</h2>
+        <div id="all-listings" class="space-y-6"></div>
+    </div>
+
+    <div class="fixed bottom-0 left-0 right-0 bg-[#111111] text-center py-3 text-xs text-gray-500 border-t border-white/10">
+        Дари • Все данные с telegram_id • Версия 2.0
+    </div>
+</body>
+</html>
