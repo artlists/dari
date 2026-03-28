@@ -36,16 +36,12 @@
             tailwind.config = { content: [] };
         }
 
-        // Демо-объявления
-        let fakeListings = [
-            { id: 1, username: "ferma_kras", name: "Ферма «Красная»", telegram_id: 123456789, have: "Свежие овощи, яйца, молоко (каждую неделю)", need: "10 занятий английским", desc: "Готов дарить продукты" },
-            { id: 2, username: "club_pixel", name: "Клуб «Pixel»", telegram_id: 987654321, have: "10 часов игры + кофе", need: "Продукты с фермы на 7000 ₽", desc: "" },
-            { id: 3, username: "english_tutor", name: "Анна • Репетитор", telegram_id: 555666777, have: "Репетитор по английскому (онлайн)", need: "2 ночи в глэмпинге", desc: "Могу провести 8 занятий" },
-            { id: 4, username: "glamping_sun", name: "Глэмпинг «Солнечный»", telegram_id: 111222333, have: "Номер на 2 ночи", need: "Ужин в ресторане на 4 человека", desc: "" },
-            { id: 5, username: "rest_vkus", name: "Ресторан «Вкусно»", telegram_id: 444555666, have: "Ужин на 4 персоны", need: "10 часов в компьютерном клубе", desc: "" }
-        ];
+        // Хранилище всех актуальных даров (получаемых из бота)
+        let allListings = [];
 
         let myOffers = [];
+        // Все актуальные лоты (кеш, синхронизируется с ботом)
+        // let allListings = []; // Уже объявлено выше
 
         function loadMyOffers() {
             const saved = localStorage.getItem('dari_myOffers');
@@ -141,8 +137,11 @@
         function renderAllListings() {
             const container = document.getElementById('all-listings');
             container.innerHTML = '';
-
-            fakeListings.forEach(listing => {
+            if (!allListings.length) {
+                container.innerHTML = '<div class="text-center text-gray-400 py-12">Нет доступных даров</div>';
+                return;
+            }
+            allListings.forEach(listing => {
                 const card = document.createElement('div');
                 card.className = 'bg-transparent border border-white/10 rounded-2xl p-6 mb-6 cursor-pointer hover:border-emerald-400 transition-all';
                 card.innerHTML = `
@@ -173,25 +172,17 @@
         }
 
         function likeListing(id) {
-            const listing = fakeListings.find(l => l.id === id);
+            const listing = allListings.find(l => l.id === id);
             if (!listing) return;
 
             tg.HapticFeedback.impactOccurred('medium');
 
-            const matchChance = Math.random();
-            if (matchChance > 0.35) {
-                openMatchPanel(listing.username);
-
-                // Отправляем матч в бот с telegram_id
-                tg.sendData(JSON.stringify({
-                    type: 'match',
-                    my_id: currentUser.id,
-                    partner_id: listing.telegram_id,
-                    partner: listing
-                }));
-            } else {
-                tg.showAlert('Не подошло 😔 Но есть ещё сотни даров!');
-            }
+            tg.sendData(JSON.stringify({
+                type: 'like',
+                my_id: currentUser.id,
+                partner_id: listing.telegram_id,
+                listing_id: listing.id
+            }));
         }
         // MATCH PANEL functions
         function openMatchPanel(username) {
@@ -237,12 +228,30 @@
 
         window.onload = function() {
             initTelegram();
+            tg.sendData(JSON.stringify({ type: 'get_listings' }));
             initTailwind();
             loadMyOffers();
             renderAllListings();
             
             console.log('%c🚀 Дари — улучшенная версия готова. Telegram ID сохранён во всех данных.', 'color:#10b981; font-weight:bold');
         };
+
+        // Получение новых данных от бота
+        initTelegram();
+        tg.onEvent('message', function(event) {
+            try {
+                const data = JSON.parse(event.data);
+                if (data.type === 'listings') {
+                    allListings = data.listings || [];
+                    renderAllListings();
+                }
+                if (data.type === 'match') {
+                    openMatchPanel(data.username);
+                }
+            } catch (e) {
+                console.log('event parse error', e);
+            }
+        });
     </script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;display=swap');
